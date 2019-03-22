@@ -7,7 +7,7 @@ const he = require("he");
 const Post = require("../models/post");
 // const Mercury = require('@postlight/mercury-parser')
 
-mongoose.connect("mongodb://localhost/newsletter");
+mongoose.connect(`${process.env.MONGO_URL}newsletter?retryWrites=true`);
 
 const db = mongoose.connection;
 

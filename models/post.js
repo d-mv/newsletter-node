@@ -1,7 +1,7 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 
-mongoose.connect("mongodb://localhost/newsletter");
+mongoose.connect(`${process.env.MONGO_URL}newsletter?retryWrites=true`);
 
 const db = mongoose.connection;
 

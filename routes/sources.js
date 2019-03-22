@@ -4,6 +4,8 @@ const Source = require("../models/source");
 
 /* GET users listing. */
 router.get('/list', function(req, res, next) {
+  console.log(process.env.MONGO_USER)
+  console.log(process.env.MONGO_PASS)
   Source.getListOfSources(req, (err, response)=> {
     if (err) throw err
     res.send(response);

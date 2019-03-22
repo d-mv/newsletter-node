@@ -6,6 +6,8 @@ var logger = require('morgan');
 const mongo = require("mongodb");
 const mongoose = require("mongoose");
 const db = mongoose.connection;
+const dotenv = require("dotenv").config()
+
 
 // routes
 var indexRouter = require('./routes/index');
