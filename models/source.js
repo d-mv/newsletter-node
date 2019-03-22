@@ -26,6 +26,7 @@ const SourceSchema = mongoose.Schema({
 const Source = (module.exports = mongoose.model("Source", SourceSchema));
 
 module.exports.getSourceByName = (name, callback) => {
+  console.log(`Source.getSourceByName: ${name}`);
   const query = { name: name };
   Source.findOne(query, callback);
 };
@@ -91,8 +92,10 @@ const proccessPosts = (source, posts) => {
   // });
 };
 
-module.exports.getSourceInfo = (source, callback) => {
+module.exports.updatePosts = (source, callback) => {
 // parse the server response
+  console.log(`Source.updatePosts: ${source}`);
+
   const parseResponse = (source, response) => {
     const xmlData = response.data;
 
@@ -105,7 +108,10 @@ module.exports.getSourceInfo = (source, callback) => {
     var jsonObj = parser.convertToJson(tObj, parserOptions);
     // parse and refill posts
     proccessPosts(source, jsonObj.rss.channel.item);
-    return jsonObj.rss.channel.item;
+    // newPost.save(err => {
+    //   if (err) console.log(err);
+    // });
+    return "";
   };
 
   async function getSourceDetails() {
@@ -120,10 +126,11 @@ module.exports.getSourceInfo = (source, callback) => {
       .then(response => {
         url = response.url;
         sourceId = response._id;
+        console.log(`Got sourceID: ${sourceId}`);
       });
     // set result var
     let result = "";
-    // get the source info
+    // get the source data
     axios
       .get(url)
       .then(res => {
@@ -133,7 +140,7 @@ module.exports.getSourceInfo = (source, callback) => {
         console.log(err);
       })
       .then(() => {
-        callback(null, parseResponse(source, result));
+        callback(null, parseResponse(sourceId, result));
       });
   }
   getSourceDetails();

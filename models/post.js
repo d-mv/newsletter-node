@@ -9,7 +9,7 @@ const ObjectId = mongoose.Schema.Types.ObjectId;
 
 const PostSchema = mongoose.Schema({
   source: {
-    type: ObjectId
+    type: String
   },
   title: {
     type: String
@@ -55,5 +55,6 @@ module.exports.getPostById = (id, callback) => {
 };
 
 module.exports.getPostsBySource = (id, callback) => {
-  Post.findById(id, callback);
+  console.log(`Post.getPostsBySource: ${id}`);
+  Post.find({source: id}, callback);
 };
