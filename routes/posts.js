@@ -3,39 +3,51 @@ var router = express.Router();
 const Source = require("../models/source");
 const Post = require("../models/post");
 
-/* GET users listing. */
-router.get("*", function(req, res, next) {
-  // check if id present
-  const postId = req.query.id;
-  console.log(postId);
-  if (postId != "") {
-    console.log('insideif');
+router.get("/", function(req, res, next) {
+  res.send("Available actions: update (update individual post), refresh (refresh posts)");
+});
 
-    switch (req.query.action) {
+router.post("/update", function(req, res, next) {
+  const postId = req.body.id;
+  // check if id present
+  if (postId != "") {
+    // check action
+    switch (req.body.action) {
+      // update individual
       case "update":
-        const fields = req.query.fields.split(";");
-        const query = {_id: postId}
-        const updateRequest = {};
-        if (fields) {
-          fields.forEach(field => {
-            const fieldArray = field.split(":");
-            updateRequest[fieldArray[0]] = fieldArray[1];
-          });
+        const updateRequest = req.body.fields;
+        const query = {
+          _id: postId
         }
         if (updateRequest != {}) {
-          Post.findOneAndUpdate(
-            query,
-            updateRequest,
-            (err, response) => {
-              if (err) res.send("-1");;
-              res.send('1');
-          })}
+          Post.findOneAndUpdate(query, updateRequest, (err, response) => {
+            if (err) res.send("-1");
+            res.send("1");
+          });
+        }
         break;
       default:
         return null;
     }
   }
-})
+});
+
 // id=5c9509bfb21ff60d537ef96f&action=update&fields:read=true
-// 5c9509bfb21ff60d537ef96f
+
+router.get("/refresh", function (req, res, next) {
+  Source.getListOfSources(req, (err, response) => {
+    if (err) throw err;
+    Post.refreshPosts(response, (err, reply) => {
+    res.send(reply)
+    })
+  });
+});
+
+router.get('/all', (req,res,next)=> {
+  console.log('~ requested all posts')
+      Post.getAllPosts('', (err, response) => {
+        if (err) throw err;
+        res.json(response);
+      });
+})
 module.exports = router;
