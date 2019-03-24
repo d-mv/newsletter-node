@@ -41,7 +41,7 @@ router.get("*", function(req, res, next) {
     console.log(`SourceID: ${response._id}`);
     const sourceId = response._id;
     Post.getPostsBySource(sourceId, (err, response) => {
-      console.log(`Posts: ${response}`);
+      // console.log(`Posts: ${response}`);
 
       if (err) throw err;
       res.send(response);
