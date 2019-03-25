@@ -161,5 +161,9 @@ const downloadPosts = query => {
 module.exports.refreshPosts = (query, callback) => {
   console.log(`~ Post.refreshPosts: ${query}`);
   downloadPosts(query);
+  setInterval(() => {
+    console.log(`~ update posts...`);
+    downloadPosts(query);
+},600000)
   callback(null, "1");
 };

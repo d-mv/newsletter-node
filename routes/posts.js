@@ -8,6 +8,8 @@ router.get("/", function(req, res, next) {
 });
 
 router.post("/update", function(req, res, next) {
+  console.log(req.body);
+  
   const postId = req.body.id;
   // check if id present
   if (postId != "") {
