@@ -100,8 +100,31 @@ router.post("/", function(req, res, next) {
 router.get("/list", (req, res, next) => {
   const query = "";
   Post.getAllPosts(query, (err, response) => {
-    if (err) res.send(err);
-    res.send(response);
+    if (err) { res.send(err) } else {
+      res.send(response);
+    }
+  });
+});
+router.get("/sources", (req, res, next) => {
+  const query = "";
+  Source.getListOfSources(query, (err, response) => {
+    if (err) {
+      res.send(err);
+    } else {
+      res.send(response);
+    }
+  });
+});
+
+router.get("/post/*", (req, res, next) => {
+  console.log(req.path.substr(6, req.path.length))
+  const id = req.path.substr(6, req.path.length)
+  const query = {
+    _id: id
+  };
+  Post.getPostById(query, (err, response) => {
+    if (err) {res.send(err)} else {
+    res.send(response);}
   });
 });
 

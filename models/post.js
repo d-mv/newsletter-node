@@ -39,6 +39,12 @@ const PostSchema = mongoose.Schema({
   text: {
     type: String
   },
+  readTime: {
+    type: Number
+  },
+  pages: {
+    type: Number
+  },
   read: {
     type: Boolean,
     default: false
@@ -55,21 +61,26 @@ module.exports.getPostById = (id, callback) => {
   Post.findById(id, callback);
 };
 module.exports.getAllPosts = (req, callback) => {
-  Post.aggregate([
-    {
-      $project: {
-        source: 1,
-        title: 1,
-        url: 1,
-        author: 1,
-        published: 1,
-        parsed: 1,
-        text: {
-          $substrCP: ['$text',0,800]
+  Post.aggregate(
+    [
+      {
+        $project: {
+          source: 1,
+          title: 1,
+          url: 1,
+          author: 1,
+          published: 1,
+          parsed: 1,
+          readTime: 1,
+          pages: 1,
+          text: {
+            $substrCP: ["$text", 0, 800]
+          }
         }
       }
-    }
-  ], callback);
+    ],
+    callback
+  );
 };
 module.exports.getPostsBySource = (id, callback) => {
   console.log(`Post.getPostsBySource: ${id}`);
@@ -104,20 +115,20 @@ const parserOptions = {
 const processPost = (source, post) => {
   // console.log("~ processPost is here");
 
-  Post.getPostsByUrl(post.link, (err, res) => {
+  Post.getPostsByUrl(post.url, (err, res) => {
     if (err) console.log(err);
     if (res) {
     } else {
-      console.log("hi");
-
       const newPost = new Post({
         source: source,
         title: post.title,
-        url: post.link,
-        author: post.author.name,
+        url: post.url,
+        author: post.author,
         published: post.published,
         parsed: new Date(),
-        text: post.text
+        text: post.text,
+        readTime: post.readTime,
+        pages: post.pages
       });
       newPost.save(err => {
         if (err) console.log(err);
@@ -128,11 +139,10 @@ const processPost = (source, post) => {
 
 const parseResponse = (source, response) => {
   // console.log("~ parseResponse is here");
-  let newItems = [];
+  // let newItems = [];
   // parse the server response
   const xmlData = response.data;
   let dataObj = "";
-
   if (typeof xmlData != "object") {
     if (parser.validate(xmlData) === true) {
       //optional (it'll return an object in case it's not valid)
@@ -140,7 +150,6 @@ const parseResponse = (source, response) => {
     }
     // Intermediate obj
     var tObj = parser.getTraversalObj(xmlData, parserOptions);
-    console.log(4);
     var jsonObj = parser.convertToJson(tObj, parserOptions);
     // parse and refill posts
     dataObj = jsonObj.rss.channel.item;
@@ -149,31 +158,73 @@ const parseResponse = (source, response) => {
   }
 
   // individual corrections
-  if (dataObj[0].title.__cdata) {
-    dataObj.map(post => {
-      newItems.push({
-        title: post.title.__cdata,
-        url: post.link,
-        author: post["dc:creator"].__cdata,
-        published: post.pubDate,
-        text: post["content:encoded"].__cdata
-      });
-    });
-  } else if (dataObj[0].content_html) {
-    dataObj.map(post => {
-      newItems.push({
-        title: post.title,
-        url: post.url,
-        author: post.author.name,
-        published: post.date_published,
-        text: post.content_html
-      });
-    });
-  } else {
-    newItems = dataObj
-  }
-  newItems.forEach(post => {
-    processPost(source, post);
+  dataObj.map(post => {
+    let title = "";
+    let url = "";
+    let author = "";
+    let published = "";
+    let text = "";
+    // title
+    if (post.title) {
+      if (post.title["__cdata"]) {
+        title = post.title["__cdata"];
+      } else {
+        title = post.title;
+      }
+    }
+    // link
+    if (post.link) {
+      url = post.link;
+    } else {
+      url = post.url;
+    }
+    // author
+    if (post.author) {
+      if (post.author.name) {
+        author = post.author.name;
+      } else {
+        author = post.author;
+      }
+    } else if (post["dc:creator"]) {
+      if (post["dc:creator"]["__cdata"]) {
+        author = post["dc:creator"]["__cdata"];
+      } else {
+        author = post["dc:creator"];
+      }
+    }
+
+    // published
+    if (post.pubDate) {
+      published = post.pubDate;
+    } else if (post.date_published) {
+      published = post.date_published;
+    } else {
+      published = post.published;
+    }
+    // text
+    if (post["content:encoded"]) {
+      if (post["content:encoded"].__cdata) {
+        text = post["content:encoded"].__cdata;
+      } else {
+        text = post["content:encoded"];
+      }
+    } else if (post.content_html) {
+      text = post.content_html;
+    } else {
+      text = post.content;
+    }
+    // create and push object
+
+    const newPost = {
+      title: title,
+      url: url,
+      author: author,
+      published: published,
+      text: text,
+      readTime: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 1500),
+      pages: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 3000)
+    };
+    processPost(source, newPost);
   });
 };
 
@@ -199,10 +250,11 @@ const downloadPosts = query => {
   Array.from(query).map(source => {
     processSource(source);
   });
+  console.log("~ update finished");
 };
 
 module.exports.refreshPosts = (query, callback) => {
-  console.log(`~ Post.refreshPosts: ${query}`);
+  console.log(`~ Post.refreshPosts`);
   downloadPosts(query);
   setInterval(() => {
     console.log(`~ update posts...`);
