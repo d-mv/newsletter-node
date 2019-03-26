@@ -9,7 +9,7 @@ router.get("/", function(req, res, next) {
 
 router.post("/update", function(req, res, next) {
   console.log(req.body);
-  
+
   const postId = req.body.id;
   // check if id present
   if (postId != "") {
@@ -17,16 +17,16 @@ router.post("/update", function(req, res, next) {
     switch (req.body.action) {
       // update individual
       case "update":
-        const updateRequest = req.body.fields;
-        const query = {
-          _id: postId
-        }
-        if (updateRequest != {}) {
-          Post.findOneAndUpdate(query, updateRequest, (err, response) => {
-            if (err) res.send("-1");
-            res.send("1");
-          });
-        }
+        // const updateRequest = req.body.fields;
+        // const query = {
+        //   _id: postId
+        // }
+        // if (updateRequest != {}) {
+        //   Post.findOneAndUpdate(query, updateRequest, (err, response) => {
+        //     if (err) res.send("-1");
+        //     res.send("1");
+        //   });
+        // }
         break;
       default:
         return null;

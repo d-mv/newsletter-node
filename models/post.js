@@ -39,6 +39,12 @@ const PostSchema = mongoose.Schema({
   text: {
     type: String
   },
+  readTime: {
+    type: Number
+  },
+  pages: {
+    type: Number
+  },
   read: {
     type: Boolean,
     default: false
@@ -55,7 +61,26 @@ module.exports.getPostById = (id, callback) => {
   Post.findById(id, callback);
 };
 module.exports.getAllPosts = (req, callback) => {
-  Post.find({}, callback);
+  Post.aggregate(
+    [
+      {
+        $project: {
+          source: 1,
+          title: 1,
+          url: 1,
+          author: 1,
+          published: 1,
+          parsed: 1,
+          readTime: 1,
+          pages: 1,
+          text: {
+            $substrCP: ["$text", 0, 800]
+          }
+        }
+      }
+    ],
+    callback
+  );
 };
 module.exports.getPostsBySource = (id, callback) => {
   console.log(`Post.getPostsBySource: ${id}`);
@@ -90,47 +115,116 @@ const parserOptions = {
 const processPost = (source, post) => {
   // console.log("~ processPost is here");
 
-  Post.getPostsByUrl(post.link, (err, res) => {
+  Post.getPostsByUrl(post.url, (err, res) => {
     if (err) console.log(err);
     if (res) {
-      console.log('duplicate');
-
     } else {
       const newPost = new Post({
         source: source,
-        title: post.title.__cdata,
-        url: post.link,
-        author: post["dc:creator"].__cdata,
-        published: post.pubDate,
+        title: post.title,
+        url: post.url,
+        author: post.author,
+        published: post.published,
         parsed: new Date(),
-        text: post["content:encoded"].__cdata
+        text: post.text,
+        readTime: post.readTime,
+        pages: post.pages
       });
       newPost.save(err => {
         if (err) console.log(err);
       });
     }
   });
-
 };
 
 const parseResponse = (source, response) => {
   // console.log("~ parseResponse is here");
-
+  // let newItems = [];
   // parse the server response
   const xmlData = response.data;
-
-  if (parser.validate(xmlData) === true) {
-    //optional (it'll return an object in case it's not valid)
-    var jsonObj = parser.parse(xmlData, parserOptions);
+  let dataObj = "";
+  if (typeof xmlData != "object") {
+    if (parser.validate(xmlData) === true) {
+      //optional (it'll return an object in case it's not valid)
+      var jsonObj = parser.parse(xmlData, parserOptions);
+    }
+    // Intermediate obj
+    var tObj = parser.getTraversalObj(xmlData, parserOptions);
+    var jsonObj = parser.convertToJson(tObj, parserOptions);
+    // parse and refill posts
+    dataObj = jsonObj.rss.channel.item;
+  } else if (xmlData.items) {
+    dataObj = xmlData.items;
   }
-  // Intermediate obj
-  var tObj = parser.getTraversalObj(xmlData, parserOptions);
-  var jsonObj = parser.convertToJson(tObj, parserOptions);
-  // parse and refill posts
-  const newItems = jsonObj.rss.channel.item;
 
-  newItems.forEach(post => {
-    processPost(source, post);
+  // individual corrections
+  dataObj.map(post => {
+    let title = "";
+    let url = "";
+    let author = "";
+    let published = "";
+    let text = "";
+    // title
+    if (post.title) {
+      if (post.title["__cdata"]) {
+        title = post.title["__cdata"];
+      } else {
+        title = post.title;
+      }
+    }
+    // link
+    if (post.link) {
+      url = post.link;
+    } else {
+      url = post.url;
+    }
+    // author
+    if (post.author) {
+      if (post.author.name) {
+        author = post.author.name;
+      } else {
+        author = post.author;
+      }
+    } else if (post["dc:creator"]) {
+      if (post["dc:creator"]["__cdata"]) {
+        author = post["dc:creator"]["__cdata"];
+      } else {
+        author = post["dc:creator"];
+      }
+    }
+
+    // published
+    if (post.pubDate) {
+      published = post.pubDate;
+    } else if (post.date_published) {
+      published = post.date_published;
+    } else {
+      published = post.published;
+    }
+    // text
+    if (post["content:encoded"]) {
+      if (post["content:encoded"].__cdata) {
+        text = post["content:encoded"].__cdata;
+      } else {
+        text = post["content:encoded"];
+      }
+    } else if (post.content_html) {
+      text = post.content_html;
+    } else {
+      text = post.content;
+    }
+    // create and push object
+
+    const newPost = {
+      title: title,
+      url: url,
+      author: author,
+      published: published,
+      text: text,
+      readTime: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 1500),
+      pages: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 3000)
+    };
+    processPost(source, newPost);
   });
 };
 
@@ -156,14 +250,15 @@ const downloadPosts = query => {
   Array.from(query).map(source => {
     processSource(source);
   });
+  console.log("~ update finished");
 };
 
 module.exports.refreshPosts = (query, callback) => {
-  console.log(`~ Post.refreshPosts: ${query}`);
+  console.log(`~ Post.refreshPosts`);
   downloadPosts(query);
   setInterval(() => {
     console.log(`~ update posts...`);
     downloadPosts(query);
-},600000)
+  }, 600000);
   callback(null, "1");
 };
