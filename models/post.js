@@ -55,7 +55,21 @@ module.exports.getPostById = (id, callback) => {
   Post.findById(id, callback);
 };
 module.exports.getAllPosts = (req, callback) => {
-  Post.find({}, callback);
+  Post.aggregate([
+    {
+      $project: {
+        source: 1,
+        title: 1,
+        url: 1,
+        author: 1,
+        published: 1,
+        parsed: 1,
+        text: {
+          $substrCP: ['$text',0,800]
+        }
+      }
+    }
+  ], callback);
 };
 module.exports.getPostsBySource = (id, callback) => {
   console.log(`Post.getPostsBySource: ${id}`);
@@ -93,42 +107,71 @@ const processPost = (source, post) => {
   Post.getPostsByUrl(post.link, (err, res) => {
     if (err) console.log(err);
     if (res) {
-      console.log('duplicate');
-
     } else {
+      console.log("hi");
+
       const newPost = new Post({
         source: source,
-        title: post.title.__cdata,
+        title: post.title,
         url: post.link,
-        author: post["dc:creator"].__cdata,
-        published: post.pubDate,
+        author: post.author.name,
+        published: post.published,
         parsed: new Date(),
-        text: post["content:encoded"].__cdata
+        text: post.text
       });
       newPost.save(err => {
         if (err) console.log(err);
       });
     }
   });
-
 };
 
 const parseResponse = (source, response) => {
   // console.log("~ parseResponse is here");
-
+  let newItems = [];
   // parse the server response
   const xmlData = response.data;
+  let dataObj = "";
 
-  if (parser.validate(xmlData) === true) {
-    //optional (it'll return an object in case it's not valid)
-    var jsonObj = parser.parse(xmlData, parserOptions);
+  if (typeof xmlData != "object") {
+    if (parser.validate(xmlData) === true) {
+      //optional (it'll return an object in case it's not valid)
+      var jsonObj = parser.parse(xmlData, parserOptions);
+    }
+    // Intermediate obj
+    var tObj = parser.getTraversalObj(xmlData, parserOptions);
+    console.log(4);
+    var jsonObj = parser.convertToJson(tObj, parserOptions);
+    // parse and refill posts
+    dataObj = jsonObj.rss.channel.item;
+  } else if (xmlData.items) {
+    dataObj = xmlData.items;
   }
-  // Intermediate obj
-  var tObj = parser.getTraversalObj(xmlData, parserOptions);
-  var jsonObj = parser.convertToJson(tObj, parserOptions);
-  // parse and refill posts
-  const newItems = jsonObj.rss.channel.item;
 
+  // individual corrections
+  if (dataObj[0].title.__cdata) {
+    dataObj.map(post => {
+      newItems.push({
+        title: post.title.__cdata,
+        url: post.link,
+        author: post["dc:creator"].__cdata,
+        published: post.pubDate,
+        text: post["content:encoded"].__cdata
+      });
+    });
+  } else if (dataObj[0].content_html) {
+    dataObj.map(post => {
+      newItems.push({
+        title: post.title,
+        url: post.url,
+        author: post.author.name,
+        published: post.date_published,
+        text: post.content_html
+      });
+    });
+  } else {
+    newItems = dataObj
+  }
   newItems.forEach(post => {
     processPost(source, post);
   });
@@ -164,6 +207,6 @@ module.exports.refreshPosts = (query, callback) => {
   setInterval(() => {
     console.log(`~ update posts...`);
     downloadPosts(query);
-},600000)
+  }, 600000);
   callback(null, "1");
 };
