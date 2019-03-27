@@ -9,10 +9,10 @@
     "dev": "nodemon ./bin/start.js"
   },
   "dependencies": {
-    "@postlight/mercury-parser": "^2.0.0",
     "axios": "^0.18.0",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "~1.4.3",
+    "cors": "^2.8.5",
     "debug": "~2.6.9",
     "dotenv": "^7.0.0",
     "ejs": "~2.5.7",
