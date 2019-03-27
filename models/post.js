@@ -214,6 +214,26 @@ const parseResponse = (source, response) => {
       text = post.content;
     }
     // create and push object
+    text = text
+      .replace(/(<head>.*<\/head>)/gm, "")
+      .replace(/(<style>.*<\/style>)/gm, "")
+      .replace(/(<script>.*<\/script>)/gm, "")
+      .replace(/(<figure>.*<\/figure>)/gm, "")
+      .replace(/(<iframe .*>.*<\/iframe>)/gm, "")
+      .replace(/(<button .*>.*<\/button>)/gm, "")
+      .replace(/(<address>.*<\/address>)/gm, "")
+      .replace(/(<title>.*<\/title>)/gm, "")
+      .replace(/(<header>.*<\/header>)/gm, "")
+      .replace(/(<footer>.*<\/footer>)/gm, "")
+      .replace(/(<figcaption>.*<\/figcaption>)/gm, "")
+      .replace(/(<video .*>.*<\/video>)/gm, "")
+      .replace(/(<img .*>.*<\/img>)/gm, "")
+      .replace(/(<time>.*<\/time>)/gm, "")
+      .replace(/(<hr>)/gm, "")
+      .replace(/(<meta .*>)/gm, "")
+      .replace(/(<link .*>)/gm, "")
+
+    const textLength = text.length;
 
     const newPost = {
       title: title,
@@ -221,8 +241,8 @@ const parseResponse = (source, response) => {
       author: author,
       published: published,
       text: text,
-      readTime: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 1500),
-      pages: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 3000)
+      readTime: Math.round(textLength / 1500),
+      pages: Math.round(textLength / 3000)
     };
     processPost(source, newPost);
   });
