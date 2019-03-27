@@ -1,13 +1,12 @@
 const mongoose = require("mongoose");
 const bcrypt = require("bcryptjs");
 const Source = require("./source");
-// import downloadPosts from "../modules/parse_source";
+const LogUrl = require("./log");
 const axios = require("axios");
 const parser = require("fast-xml-parser");
 const he = require("he");
 
 // mongoose
-
 mongoose.Promise = global.Promise;
 mongoose
   .connect(`${process.env.MONGO_URL}newsletter?retryWrites=true`)
@@ -60,6 +59,10 @@ const Post = (module.exports = mongoose.model("Post", PostSchema));
 module.exports.getPostById = (id, callback) => {
   Post.findById(id, callback);
 };
+
+module.exports.deletePost = (id, callback) => {
+  Post.deleteOne({ _id: id }, callback);
+};
 module.exports.getAllPosts = (req, callback) => {
   Post.aggregate(
     [
@@ -73,6 +76,8 @@ module.exports.getAllPosts = (req, callback) => {
           parsed: 1,
           readTime: 1,
           pages: 1,
+          star: 1,
+          read: 1,
           text: {
             $substrCP: ["$text", 0, 800]
           }
@@ -88,7 +93,6 @@ module.exports.getPostsBySource = (id, callback) => {
 };
 
 module.exports.getPostsByUrl = (url, callback) => {
-  // console.log(`Post.getPostsByUrl: ${url}`);
   Post.findOne({ url: url }, (err, res) => {
     callback(err, res);
   });
@@ -113,9 +117,8 @@ const parserOptions = {
 };
 
 const processPost = (source, post) => {
-  // console.log("~ processPost is here");
-
-  Post.getPostsByUrl(post.url, (err, res) => {
+  // check log if downloaded before
+  LogUrl.getLogByUrl(post.url, (err, res) => {
     if (err) console.log(err);
     if (res) {
     } else {
@@ -131,16 +134,23 @@ const processPost = (source, post) => {
         pages: post.pages
       });
       newPost.save(err => {
-        if (err) console.log(err);
+        if (err) {
+          console.log(err);
+        } else {
+          // create new log entry
+          const newLogUrl = new LogUrl({
+            url: post.url
+          });
+          newLogUrl.save(err => {
+            if (err) console.log(err);
+          });
+        }
       });
     }
   });
 };
 
 const parseResponse = (source, response) => {
-  // console.log("~ parseResponse is here");
-  // let newItems = [];
-  // parse the server response
   const xmlData = response.data;
   let dataObj = "";
   if (typeof xmlData != "object") {
@@ -214,6 +224,26 @@ const parseResponse = (source, response) => {
       text = post.content;
     }
     // create and push object
+    text = text
+      .replace(/(<head>.*<\/head>)/gm, "")
+      .replace(/(<style>.*<\/style>)/gm, "")
+      .replace(/(<script>.*<\/script>)/gm, "")
+      .replace(/(<figure>.*<\/figure>)/gm, "")
+      .replace(/(<iframe .*>.*<\/iframe>)/gm, "")
+      .replace(/(<button .*>.*<\/button>)/gm, "")
+      .replace(/(<address>.*<\/address>)/gm, "")
+      .replace(/(<title>.*<\/title>)/gm, "")
+      .replace(/(<header>.*<\/header>)/gm, "")
+      .replace(/(<footer>.*<\/footer>)/gm, "")
+      .replace(/(<figcaption>.*<\/figcaption>)/gm, "")
+      .replace(/(<video .*>.*<\/video>)/gm, "")
+      .replace(/(<img .*>.*<\/img>)/gm, "")
+      .replace(/(<time>.*<\/time>)/gm, "")
+      .replace(/(<hr>)/gm, "")
+      .replace(/(<meta .*>)/gm, "")
+      .replace(/(<link .*>)/gm, "");
+
+    const textLength = text.length;
 
     const newPost = {
       title: title,
@@ -221,8 +251,8 @@ const parseResponse = (source, response) => {
       author: author,
       published: published,
       text: text,
-      readTime: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 1500),
-      pages: Math.round(text.replace(/<(?:.|\n)*?>/gm, " ").length / 3000)
+      readTime: Math.round(textLength / 1500),
+      pages: Math.round(textLength / 3000)
     };
     processPost(source, newPost);
   });
