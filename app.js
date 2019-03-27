@@ -10,7 +10,7 @@ const db = mongoose.connection;
 const dotenv = require("dotenv").config();
 
 // routes
-const indexRouter = require("./routes/index");
+const indexRouter = require("./routes/api/index");
 
 const app = express();
 
@@ -25,19 +25,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
-// Access Control
-// app.use((req, res, next) => {
-//   res.header("Access-Control-Allow-Origin", "*");
-//   res.header(
-//     "Access-Control-Allow-Headers",
-//     "Origin, X-Requested-With, Content-Type, Accept"
-//   );
-//   next();
-// });
-
-app.use("/", indexRouter);
-// app.use('/sources', sourcesRouter);
-// app.use('/posts', postsRouter);
+app.use("/api", indexRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
@@ -52,7 +40,8 @@ app.use(function(err, req, res, next) {
 
   // render the error page
   res.status(err.status || 500);
-  res.render("error");
+  res.send()
+  // res.render("error");
 });
 
 module.exports = app;
