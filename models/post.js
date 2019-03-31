@@ -57,7 +57,7 @@ const PostSchema = mongoose.Schema({
 const Post = (module.exports = mongoose.model("Post", PostSchema));
 
 module.exports.getPostById = (id, callback) => {
-  Post.findById(id, callback);
+  Post.findById(id, callback).sort({published: 1});
 };
 
 module.exports.deletePost = (id, callback) => {
@@ -83,13 +83,13 @@ module.exports.getAllPosts = (req, callback) => {
           }
         }
       }
-    ],
-    callback
-  );
+    ]).sort({ published: -1 }).then(data => callback(data))
 };
 module.exports.getPostsBySource = (id, callback) => {
   console.log(`Post.getPostsBySource: ${id}`);
-  Post.find({ source: id }, callback);
+  Post.find({ source: id })
+    .sort({ published: -1 })
+    .then(data => callback(data));
 };
 
 module.exports.getPostsByUrl = (url, callback) => {
