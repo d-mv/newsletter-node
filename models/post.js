@@ -18,6 +18,9 @@ const PostSchema = mongoose.Schema({
   source: {
     type: String
   },
+  sourceId: {
+    type: String
+  },
   title: {
     type: String
   },
@@ -57,39 +60,54 @@ const PostSchema = mongoose.Schema({
 const Post = (module.exports = mongoose.model("Post", PostSchema));
 
 module.exports.getPostById = (id, callback) => {
-  Post.findById(id, callback).sort({published: 1});
+  Post.findById(id, callback).sort({ published: 1 });
 };
 
 module.exports.deletePost = (id, callback) => {
   Post.deleteOne({ _id: id }, callback);
 };
 module.exports.getAllPosts = (req, callback) => {
-  Post.aggregate(
-    [
-      {
-        $project: {
-          source: 1,
-          title: 1,
-          url: 1,
-          author: 1,
-          published: 1,
-          parsed: 1,
-          readTime: 1,
-          pages: 1,
-          star: 1,
-          read: 1,
-          text: {
-            $substrCP: ["$text", 0, 800]
-          }
+  Post.aggregate([
+    {
+      $project: {
+        source: 1,
+        sourceId: 1,
+        title: 1,
+        url: 1,
+        author: 1,
+        published: 1,
+        parsed: 1,
+        readTime: 1,
+        pages: 1,
+        star: 1,
+        read: 1,
+        text: {
+          $substrCP: ["$text", 0, 800]
         }
       }
-    ]).sort({ published: -1 }).then(data => callback(data))
+    }
+  ])
+    .sort({ published: -1 })
+    .then(data => callback(data));
 };
 module.exports.getPostsBySource = (id, callback) => {
   console.log(`Post.getPostsBySource: ${id}`);
-  Post.find({ source: id })
+  Post.find({ sourceId: id })
     .sort({ published: -1 })
     .then(data => callback(data));
+};
+
+module.exports.deletePostsBySource = (id, callback) => {
+  console.log(id);
+  Post.find({ sourceId: id }).then(data =>
+    Array.from(data).map(post => {
+      LogUrl.deleteLogByUrl(post.url, data => console.log(data));
+    })
+  );
+  Post.deleteMany({ sourceId: id },(err,res)=>{
+    if (err) callback(err)
+    callback(res)
+  });
 };
 
 module.exports.getPostsByUrl = (url, callback) => {
@@ -123,7 +141,8 @@ const processPost = (source, post) => {
     if (res) {
     } else {
       const newPost = new Post({
-        source: source,
+        source: source[0],
+        sourceId: source[1],
         title: post.title,
         url: post.url,
         author: post.author,
@@ -271,7 +290,7 @@ const processSource = source => {
       console.log(err);
     })
     .then(() => {
-      parseResponse(source.name, result);
+      parseResponse([source.name, source.id], result);
     });
 };
 

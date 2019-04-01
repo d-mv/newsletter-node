@@ -45,3 +45,22 @@ module.exports.createSource = (fields, callback) => {
 module.exports.getListOfSources = (req, callback) => {
   Source.find({}, callback);
 };
+
+module.exports.getSourceById = (id, callback) => {
+  Source.findOne({ _id: id }, callback);
+};
+
+module.exports.deleteSource = (id, callback) => {
+  Source.findOne({ _id: id }, (err, source) => {
+    if (err) callback(err);
+    if (source) {
+      Post.deletePostsBySource(source._id, (err, response) => {
+        if (err) callback(err);
+        // Source.deleteOne({ _id: source._id }, (err, res) => {
+        //   if (err) callback(err);
+        //   callback(res);
+        // });
+      });
+    }
+  });
+};
