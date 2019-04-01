@@ -23,3 +23,7 @@ const LogUrl = (module.exports = mongoose.model("Log", LogSchema));
 module.exports.getLogByUrl = (url, callback) => {
   LogUrl.findOne({ url: url }, callback);
 };
+
+module.exports.deleteLogByUrl = (url, callback) => {
+  LogUrl.deleteOne({ url: url }).then(data => callback(data));
+};

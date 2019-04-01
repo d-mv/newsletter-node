@@ -30,7 +30,11 @@ router.post("/", function(req, res, next) {
         break;
       case "delete":
         if (id) {
-          // call for delete method
+          Source.deleteSource(id, (err, response) => {
+            let result = response
+            if (err) result = err
+            res.send(result);
+          });
         }
         break;
       case "list":
