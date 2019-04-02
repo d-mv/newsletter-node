@@ -25,5 +25,7 @@ module.exports.getLogByUrl = (url, callback) => {
 };
 
 module.exports.deleteLogByUrl = (url, callback) => {
-  LogUrl.deleteOne({ url: url }).then(data => callback(data));
+  LogUrl.deleteOne({ url: url })
+    .then(data => callback(data))
+    .catch(e => console.log(e));
 };

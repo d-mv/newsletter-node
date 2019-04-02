@@ -98,16 +98,20 @@ module.exports.getPostsBySource = (id, callback) => {
 };
 
 module.exports.deletePostsBySource = (id, callback) => {
-  console.log(id);
-  Post.find({ sourceId: id }).then(data =>
-    Array.from(data).map(post => {
-      LogUrl.deleteLogByUrl(post.url, data => console.log(data));
-    })
-  );
-  Post.deleteMany({ sourceId: id },(err,res)=>{
-    if (err) callback(err)
-    callback(res)
-  });
+  Post.find({ sourceId: id })
+    .then(data =>
+      Array.from(data).map(post => {
+        LogUrl.deleteLogByUrl(post.url, (err, res) => {
+          callback(err, res);
+        });
+      })
+    )
+    .then(data =>
+      Post.deleteMany({ sourceId: id }, (err, res) => {
+        callback(err, res);
+      })
+    )
+    .catch(e => console.log(e));
 };
 
 module.exports.getPostsByUrl = (url, callback) => {

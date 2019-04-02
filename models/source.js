@@ -52,15 +52,21 @@ module.exports.getSourceById = (id, callback) => {
 
 module.exports.deleteSource = (id, callback) => {
   Source.findOne({ _id: id }, (err, source) => {
-    if (err) callback(err);
-    if (source) {
-      Post.deletePostsBySource(source._id, (err, response) => {
-        if (err) callback(err);
-        // Source.deleteOne({ _id: source._id }, (err, res) => {
-        //   if (err) callback(err);
-        //   callback(res);
-        // });
-      });
+    if (err) {
+      callback(err);
+    } else {
+      if (source) {
+        Post.deletePostsBySource(source._id, (err, response) => {
+          if (err) {
+            throw err;
+          } else {
+            Source.deleteOne({ _id: source._id }, (err, res) => {
+              if (err) throw err;
+              callback([res]);
+            });
+          }
+        });
+      }
     }
   });
 };
