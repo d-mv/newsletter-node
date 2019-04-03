@@ -11,6 +11,7 @@ const dotenv = require("dotenv").config();
 
 // routes
 const indexRouter = require("./routes/api/index");
+const appRouter = require("./routes/app/index");
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, "public")));
 
 app.use("/api", indexRouter);
+app.use("/app", appRouter);
 
 // catch 404 and forward to error handler
 app.use(function(req, res, next) {
