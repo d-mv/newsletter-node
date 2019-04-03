@@ -2,7 +2,7 @@
   "name": "newsletter-node",
   "description": "The Newsletter app backend",
   "author": "DM-v",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "scripts": {
     "start": "node ./bin/www",

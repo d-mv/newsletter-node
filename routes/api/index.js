@@ -26,17 +26,23 @@ router.post("/", function(req, res, next) {
       case "update":
         if (id && fields) {
           // call for update method
-          console.log('update method')
-        }
-        break;
-      case "delete":
-        if (id) {
-          Source.deleteSource(id, (err, response) => {
+          Source.updateSource({id:id, fields: fields},(err,response)=> {
             if (err) {
               res.send(err);
             } else {
               res.send(response);
             }
+          })
+        }
+        break;
+      case "delete":
+        if (id) {
+          Source.deleteSource(id, (response) => {
+            // if (err) {
+            //   res.send(err);
+            // } else {
+              res.send(response);
+            // }
           });
         }
         break;
