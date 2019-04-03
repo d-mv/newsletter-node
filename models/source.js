@@ -50,6 +50,17 @@ module.exports.getSourceById = (id, callback) => {
   Source.findOne({ _id: id }, callback);
 };
 
+module.exports.updateSource = (options, callback) =>{
+ Source.updateOne({
+   _id: options.id
+ },
+ {
+   name: options.fields.name,
+   url: options.fields.url,
+   home: options.fields.home,
+ }).then(data => callback(data))
+}
+
 module.exports.deleteSource = (id, callback) => {
   Source.findOne({ _id: id }, (err, source) => {
     if (err) {
